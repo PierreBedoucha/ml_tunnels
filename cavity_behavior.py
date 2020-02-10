@@ -26,34 +26,48 @@ def facet_scatter(x, y, **kwargs):
     # c[1:] = y
     # y = pd.Series(c)
 
-    plt.scatter(x, y, marker='.')
+    # plt.scatter(x, y, marker='.')
     ax = plt.gca()
-    d = scipy.zeros(len(y))
-    ax.fill_between(x, y, where=y >= d, interpolate=True, facecolor='lightcyan', alpha=0.7)
-    ax.fill_between(x, y, where=y <= d, interpolate=True, facecolor='peachpuff', alpha=0.7)
+    d0 = scipy.zeros(len(y))
+    ax.fill_between(x, y, where=y >= d0, interpolate=True, facecolor='indianred', alpha=0.4)
+    ax.fill_between(x, y, where=y <= d0, interpolate=True, facecolor='limegreen', alpha=0.4)
 
 
-def facet_scatter_pos(x, y, **kwargs):
-    """Draw scatterplot with point colors from a faceted DataFrame columns."""
+def facet_auc(x, z, w1, **kwargs):
     kwargs.pop("color")
-    plt.scatter(x, y, marker='.')
     ax = plt.gca()
-    d = scipy.zeros(len(y))
-    ax.fill_betweeny(x, y, where=0 - y > 0 , interpolate=True, facecolor='lightcyan', alpha=0.7)
+    z1 = np.array(z)
+    w2 = np.array(w1)
+    ax.fill_between(x, z, w1, where=z1 >= w2, interpolate=True, facecolor='indianred', alpha=0.5)
+    ax.fill_between(x, z, w1, where=z1 <= w2, interpolate=True, facecolor='limegreen', alpha=0.5)
 
 
-def facet_scatter_neg(x, y, **kwargs):
-    """Draw scatterplot with point colors from a faceted DataFrame columns."""
+def facet_line(x, y, z, **kwargs):
     kwargs.pop("color")
-    plt.scatter(x, y, marker='.')
-    ax = plt.gca()
-    d = scipy.zeros(len(y))
-    ax.fill_betweeny(x, y, where=0 - y < 0, interpolate=True, facecolor='peachpuff', alpha=0.7)
+    if not z.any():
+        sns.lineplot(x=x, y=y, linewidth=3, color='black', label='initial structure')
+    elif -15.0 in z.values:
+        sns.lineplot(x=x, y=y, linewidth=1.2, set_markerfacecolor="white", label='negative')
+    elif 15.0 in z.values:
+        sns.lineplot(x=x, y=y, linewidth=1.2, set_markerfacecolor="white", label='positive')
+
+
+def subspace_ref(row, df):
+    mode = row['mode']
+    struct = row['struct']
+    offset = row['OFFSET']
+    air0 = df.query("mode == @mode and struct == @struct and amplitude == 0 and OFFSET == @offset")[
+        "SECTION AREA [Ų]"]
+    if air0.empty:
+        airdiff = np.nan
+    else:
+        airdiff = list(air0)[0]
+    return airdiff
 
 
 if __name__ == '__main__':
 
-    data_path = "./NATs_m7-12_a15_plane0-21A/"
+    data_path = "./NATs_m7-12_a15_plane-15_25/"
 
     list_files = [x for x in os.listdir(data_path) if x.endswith(".csv")]
     pd_dict = {}
@@ -81,10 +95,18 @@ if __name__ == '__main__':
 
         # write to csv
         # df_filtered = train.loc[train['TIME STEP'].isin([0.0, 4.0, 6.0, 8.0])]
-        df_filtered = train.loc[train['TIME STEP'].isin([0.0])]
+        df_filtered = train.loc[train['TIME STEP'].isin([1.0, 2.0, 3.0])]
         df_filtered['struct'] = ''.join(file_csv.split('_')[2])
         df_filtered['mode'] = int(file_csv.split('_')[3][1:])
-        df_filtered['amplitude'] = float(file_csv.split('_')[4])
+        try:
+            df_filtered['amplitude'] = float(file_csv.split('_')[4])
+        except ValueError as err:
+            d = {1.0: -15.0, 2.0: 0.0, 3.0: 15.0}
+            df_filtered['amplitude'] = train['TIME STEP'].map(d)
+
+        # Add ref area list column through the whole df
+        df_filtered['NEW'] = df_filtered.apply(lambda r: subspace_ref(r, df_filtered), axis=1)
+
         # df_filtered.to_csv('filtered_{}.csv'.format('_'.join(file_csv.split('_')[:3])))
 
         pd_dict['_'.join(file_csv.split('_')[:3])] = df_filtered
@@ -126,23 +148,30 @@ if __name__ == '__main__':
     col_list.sort()
 
     for mode in [7, 8, 9, 10, 11, 12]:
+    # for mode in [7]:
         all_mode = all.loc[(all['mode'] == mode)]
-        all_mode_0 = all_mode.loc[(all_mode['amplitude'] != 0.00)]
+        # all_mode_0 = all_mode.loc[(all_mode['amplitude'] != 0.00)]
 
-        h = sns.FacetGrid(all_mode_0, col="struct", sharex=True, col_wrap=3, height=2,
+        h = sns.FacetGrid(all_mode, col="struct", sharex=True, col_wrap=3, height=2,
                           aspect=1, hue="amplitude", col_order=col_list)
         sns.color_palette("BuGn_r")
         # all["OFFSET"] = all["OFFSET"].astype(str)
 
         # h.map(sns.lineplot, "OFFSET", "SECTION AREA [Ų]")
+        # h.map(facet_scatter, "OFFSET", "diff")
+
+        # Series for SectionArea for amplitude 0.0
+        # w0 = all_mode[(all_mode.amplitude.eq(0.00))]["SECTION AREA [Ų]"]
+
+        h.map(facet_line, "OFFSET", "SECTION AREA [Ų]", "amplitude")
+        h.map(facet_auc, "OFFSET", "SECTION AREA [Ų]", "NEW")
+
         # h.map(sns.scatterplot, "OFFSET", "SECTION AREA [Ų]", data=all_mode)
-        h.map(sns.lineplot, "OFFSET", "diff")
-        h.map(facet_scatter, "OFFSET", "diff")
-        # h.map(facet_scatter_pos, "OFFSET", "diff")
-        # h.map(facet_scatter_neg, "OFFSET", "diff")
+        # h.map(sns.lineplot, "OFFSET", "diff")
+        # h.map(facet_scatter, "OFFSET", "diff")
 
         plt.legend()
 
         plt.subplots_adjust(top=0.9)
-        h.fig.suptitle(str(mode))
+        h.fig.suptitle("mode " + str(mode))
         plt.show()
