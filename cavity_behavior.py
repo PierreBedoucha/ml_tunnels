@@ -34,6 +34,7 @@ def facet_scatter(x, y, **kwargs):
     # xint = range(min(x), math.ceil(max(x)) + 1)
     # plt.xticks(xint)
 
+
 def facet_auc(x, z, w1, **kwargs):
     kwargs.pop("color")
     ax = plt.gca()
@@ -46,7 +47,7 @@ def facet_auc(x, z, w1, **kwargs):
 def facet_line(x, y, z, **kwargs):
     kwargs.pop("color")
     if not z.any():
-        sns.lineplot(x=x, y=y, linewidth=3, color='black', label='initial structure')
+        sns.lineplot(x=x, y=y, linewidth=2, color='black', label='initial structure')
     elif -15.0 in z.values:
         sns.lineplot(x=x, y=y, linewidth=1.3, label='-15')
     elif 15.0 in z.values:
@@ -180,36 +181,71 @@ if __name__ == '__main__':
         '5wjd': 17,
     }
 
-    for mode in [7, 8, 9, 10, 11, 12]:
-        # for mode in [7]:
-        all_mode = all.loc[(all['mode'] == mode)]
-        # all_mode_0 = all_mode.loc[(all_mode['amplitude'] != 0.00)]
-        # all_mode_filter = all_mode.loc[(all_mode['OFFSET'] >= tunnel_struct_dict[all_mode['struct']][0])]
-        all_mode_filter_neg = all_mode[all_mode['OFFSET'] >= all_mode['struct'].map(tunnel_struct_neg_dict)].copy()
-        all_mode_filter = all_mode_filter_neg[all_mode_filter_neg['OFFSET'] <= all_mode_filter_neg['struct']
-            .map(tunnel_struct_pos_dict)].copy()
+    # for mode in [7, 8, 9, 10, 11, 12]:
+    # for mode in [7]:
+    # all_mode = all.loc[(all['mode'] == mode)]
+    all_mode = all
 
-        h = sns.FacetGrid(all_mode_filter, col="struct", sharex=False, col_wrap=3, height=2,
-                          aspect=1, hue="amplitude", col_order=col_list)
-        sns.color_palette("BuGn_r")
-        # all["OFFSET"] = all["OFFSET"].astype(str)
+    # all_mode_0 = all_mode.loc[(all_mode['amplitude'] != 0.00)]
+    # all_mode_filter = all_mode.loc[(all_mode['OFFSET'] >= tunnel_struct_dict[all_mode['struct']][0])]
+    all_mode_filter_neg = all_mode[all_mode['OFFSET'] >= all_mode['struct'].map(tunnel_struct_neg_dict)].copy()
+    all_mode_filter = all_mode_filter_neg[all_mode_filter_neg['OFFSET'] <= all_mode_filter_neg['struct']
+        .map(tunnel_struct_pos_dict)].copy()
 
-        # h.map(sns.lineplot, "OFFSET", "SECTION AREA [$\AA^2$]")
-        h.map(facet_scatter, "OFFSET", "diff")
+    # h = sns.FacetGrid(all_mode_filter, col="struct", sharex=False, col_wrap=3, height=2,
+    #                   aspect=1, hue="amplitude", col_order=col_list)
 
-        # Series for SectionArea for amplitude 0.0
-        # w0 = all_mode[(all_mode.amplitude.eq(0.00))]["SECTION AREA [$\AA^2$]"]
+    # sns.set(font_scale=1)
+    sns.set_style("whitegrid", {'axes.grid': False})
+    h = sns.FacetGrid(all_mode_filter, col="struct", row="mode", sharex=False, sharey=False, height=6,
+                      aspect=1, hue="amplitude",
+                      gridspec_kws={"hspace": 0.6})
 
-        h.map(facet_line, "OFFSET", "SECTION AREA [$\AA^2$]", "amplitude")
-        # h.map(facet_auc, "OFFSET", "SECTION AREA [$\AA^2$]", "NEW")
+    sns.color_palette("BuGn_r")
+    # all["OFFSET"] = all["OFFSET"].astype(str)
 
-        # h.map(sns.scatterplot, "OFFSET", "SECTION AREA [$\AA^2$]", data=all_mode)
-        # h.map(sns.lineplot, "OFFSET", "diff")
-        # h.map(facet_scatter, "OFFSET", "diff")
+    # h.map(sns.lineplot, "OFFSET", "SECTION AREA [$\AA^2$]")
+    h.map(facet_scatter, "OFFSET", "diff")
 
-        hand, labl = plt.gca().get_legend_handles_labels()
-        plt.legend(labl[:-4], framealpha=0.2)
+    # Series for SectionArea for amplitude 0.0
+    # w0 = all_mode[(all_mode.amplitude.eq(0.00))]["SECTION AREA [$\AA^2$]"]
 
-        plt.subplots_adjust(top=0.9)
-        h.fig.suptitle("mode " + str(mode))
-        plt.show()
+    h.map(facet_line, "OFFSET", "SECTION AREA [$\AA^2$]", "amplitude")
+    # h.map(facet_auc, "OFFSET", "SECTION AREA [$\AA^2$]", "NEW")
+
+    # h.map(sns.scatterplot, "OFFSET", "SECTION AREA [$\AA^2$]", data=all_mode)
+    # h.map(sns.lineplot, "OFFSET", "diff")
+    # h.map(facet_scatter, "OFFSET", "diff")
+
+    # hand, labl = plt.gca().get_legend_handles_labels()
+    # plt.legend(labl[:-4], framealpha=0.2)
+
+    # this surpresses the x- and y-labels on each axes of the bottom/leftmost column
+    h.set_axis_labels('', '')
+
+    h.set_titles('{col_name}' + ' mode ' + '{row_name}',  weight='bold')
+
+    # # overall ylabel
+    # h.fig.text(x=0.02, y=0.5,
+    #            verticalalignment='center',  # make sure it's aligned at center vertically
+    #            s='SECTION AREA [$\AA^2$]',  # this is the text in the ylabel
+    #            size=10,  # customize the fontsize if you will
+    #            rotation=90)  # vertical text
+    #
+    # # overall xlabel
+    # h.fig.text(x=0.5, y=0,
+    #            horizontalalignment='center',  # make sure it's aligned at center horizontally
+    #            s='OFFSET [$\AA$]',  # this is the text in the xlabel
+    #            size=10)
+
+    plt.subplots_adjust(top=0.975, bottom=0.025, left=0.025, right=0.975)
+    # for ax in h.axes.ravel():
+    #     ax.set_xticklabels(ax.get_xticklabels(), fontsize=2)
+
+    # axes = g.axes.flatten()
+    # axes[0].set_title("Internal")
+    # axes[1].set_title("External")
+
+    # h.fig.suptitle("mode " + str(mode))
+    # plt.tight_layout()
+    plt.show()
