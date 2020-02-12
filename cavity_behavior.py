@@ -29,17 +29,18 @@ def facet_scatter(x, y, **kwargs):
     # plt.scatter(x, y, marker='.')
     ax = plt.gca()
     d0 = scipy.zeros(len(y))
-    ax.fill_between(x, y, where=y >= d0, interpolate=True, facecolor='indianred', alpha=0.4)
-    ax.fill_between(x, y, where=y <= d0, interpolate=True, facecolor='limegreen', alpha=0.4)
-
+    ax.fill_between(x, y, where=y >= d0, interpolate=True, facecolor='limegreen', alpha=0.4, label="Δ positive")
+    ax.fill_between(x, y, where=y <= d0, interpolate=True, facecolor='indianred', alpha=0.4, label="Δ negative")
+    # xint = range(min(x), math.ceil(max(x)) + 1)
+    # plt.xticks(xint)
 
 def facet_auc(x, z, w1, **kwargs):
     kwargs.pop("color")
     ax = plt.gca()
     z1 = np.array(z)
     w2 = np.array(w1)
-    ax.fill_between(x, z, w1, where=z1 >= w2, interpolate=True, facecolor='indianred', alpha=0.5)
-    ax.fill_between(x, z, w1, where=z1 <= w2, interpolate=True, facecolor='limegreen', alpha=0.5)
+    ax.fill_between(x, z, w1, where=z1 >= w2, interpolate=True, facecolor='limegreen', alpha=0.4, label="Δ positive")
+    ax.fill_between(x, z, w1, where=z1 <= w2, interpolate=True, facecolor='indianred', alpha=0.4, label="Δ negative")
 
 
 def facet_line(x, y, z, **kwargs):
@@ -47,17 +48,19 @@ def facet_line(x, y, z, **kwargs):
     if not z.any():
         sns.lineplot(x=x, y=y, linewidth=3, color='black', label='initial structure')
     elif -15.0 in z.values:
-        sns.lineplot(x=x, y=y, linewidth=1.2, set_markerfacecolor="white", label='negative')
+        sns.lineplot(x=x, y=y, linewidth=1.3, label='-15')
     elif 15.0 in z.values:
-        sns.lineplot(x=x, y=y, linewidth=1.2, set_markerfacecolor="white", label='positive')
+        sns.lineplot(x=x, y=y, linewidth=1.3, label='+15')
+    # xint = range(min(x), math.ceil(max(x)) + 1)
+    # plt.xticks(xint)
 
 
 def subspace_ref(row, df):
     mode = row['mode']
     struct = row['struct']
     offset = row['OFFSET']
-    air0 = df.query("mode == @mode and struct == @struct and amplitude == 0 and OFFSET == @offset")[
-        "SECTION AREA [Ų]"]
+    air0 = df.query('mode == @mode and struct == @struct and amplitude == 0 and OFFSET == @offset')[
+        "SECTION AREA [$\AA^2$]"]
     if air0.empty:
         airdiff = np.nan
     else:
@@ -78,15 +81,27 @@ if __name__ == '__main__':
         # with open(file_csv) as f1_csv:
         #     for line in f1_csv.readlines():
 
+        with open(os.path.join(data_path, file_csv)) as f:
+            lines = f.readlines()
+
+        line_array = lines[0].split(";")
+        # line_array[-1] = "OFFSET [$\\AA$]\n"
+        line_first_el_array = line_array[0].split(" ")
+        line_first_el_array[-1] = "[$\\AA^2$]"
+        lines[0] = ' '.join(line_first_el_array) + ';' + ';'.join(line_array[1:])
+        with open(os.path.join(data_path, file_csv), "w") as f:
+            f.writelines(lines)
+
         try:
             df = pd.read_csv(os.path.join(data_path + file_csv), sep=';',
-                             converters={'SECTION AREA [Ų]': lambda x: (x.replace(",", ".")),
+                             converters={'SECTION AREA [$\AA^2$]': lambda x: (x.replace(",", ".")),
                                          'TIME STEP': lambda x: (x.replace(",", ".")),
                                          'OFFSET': lambda x: (x.replace(",", "."))})
         except pd.errors.EmptyDataError as err:
+            print(err.args[0] + " {0}".format(file_csv))
             continue
 
-        types_dict = {'SECTION AREA [Ų]': float, 'TIME STEP': float, 'OFFSET': float}
+        types_dict = {'SECTION AREA [$\AA^2$]': float, 'TIME STEP': float, 'OFFSET': float}
         for col, col_type in types_dict.items():
             df[col] = df[col].astype(col_type)
 
@@ -114,7 +129,7 @@ if __name__ == '__main__':
         # h = sns.FacetGrid(train, col="OFFSET", palette='seismic', sharey=False, sharex=True, col_wrap=6, height=2,
         #                   aspect=1)
         #
-        # h.map(sns.lineplot, "TIME STEP", "SECTION AREA [Ų]")
+        # h.map(sns.lineplot, "TIME STEP", "SECTION AREA [$\AA^2$]")
         #
         # plt.subplots_adjust(top=0.9)
         # h.fig.suptitle(file_csv)
@@ -125,8 +140,8 @@ if __name__ == '__main__':
 
 
     # res = all.groupby(['struct', 'mode']).apply(
-    #     lambda g: g['SECTION AREA [Ų]'] -
-    #               g[g.amplitude == 0.00]["SECTION AREA [Ų]"].values[0])
+    #     lambda g: g['SECTION AREA [$\AA^2$]'] -
+    #               g[g.amplitude == 0.00]["SECTION AREA [$\AA^2$]"].values[0])
     # all['diff'] = res.reset_index(drop=True)
 
     def subspace(row, df):
@@ -134,11 +149,11 @@ if __name__ == '__main__':
         struct = row['struct']
         offset = row['OFFSET']
         air0 = df.query("mode == @mode and struct == @struct and amplitude == 0 and OFFSET == @offset")[
-            "SECTION AREA [Ų]"]
+            "SECTION AREA [$\AA^2$]"]
         if air0.empty:
             airdiff = np.nan
         else:
-            airdiff = row['SECTION AREA [Ų]'] - list(air0)[0]
+            airdiff = row['SECTION AREA [$\AA^2$]'] - list(air0)[0]
         return airdiff
 
 
@@ -147,30 +162,53 @@ if __name__ == '__main__':
     col_list = list(set(all['struct'].tolist()))
     col_list.sort()
 
+    tunnel_struct_neg_dict = {
+        '3tfy': -4,
+        '4kvm': -3,
+        '4u9v': -15,
+        '5icv': -4,
+        '5k18': -6,
+        '5wjd': -6
+    }
+
+    tunnel_struct_pos_dict = {
+        '3tfy': 15,
+        '4kvm': 15,
+        '4u9v': 9,
+        '5icv': 15,
+        '5k18': 17,
+        '5wjd': 17,
+    }
+
     for mode in [7, 8, 9, 10, 11, 12]:
-    # for mode in [7]:
+        # for mode in [7]:
         all_mode = all.loc[(all['mode'] == mode)]
         # all_mode_0 = all_mode.loc[(all_mode['amplitude'] != 0.00)]
+        # all_mode_filter = all_mode.loc[(all_mode['OFFSET'] >= tunnel_struct_dict[all_mode['struct']][0])]
+        all_mode_filter_neg = all_mode[all_mode['OFFSET'] >= all_mode['struct'].map(tunnel_struct_neg_dict)].copy()
+        all_mode_filter = all_mode_filter_neg[all_mode_filter_neg['OFFSET'] <= all_mode_filter_neg['struct']
+            .map(tunnel_struct_pos_dict)].copy()
 
-        h = sns.FacetGrid(all_mode, col="struct", sharex=True, col_wrap=3, height=2,
+        h = sns.FacetGrid(all_mode_filter, col="struct", sharex=False, col_wrap=3, height=2,
                           aspect=1, hue="amplitude", col_order=col_list)
         sns.color_palette("BuGn_r")
         # all["OFFSET"] = all["OFFSET"].astype(str)
 
-        # h.map(sns.lineplot, "OFFSET", "SECTION AREA [Ų]")
-        # h.map(facet_scatter, "OFFSET", "diff")
+        # h.map(sns.lineplot, "OFFSET", "SECTION AREA [$\AA^2$]")
+        h.map(facet_scatter, "OFFSET", "diff")
 
         # Series for SectionArea for amplitude 0.0
-        # w0 = all_mode[(all_mode.amplitude.eq(0.00))]["SECTION AREA [Ų]"]
+        # w0 = all_mode[(all_mode.amplitude.eq(0.00))]["SECTION AREA [$\AA^2$]"]
 
-        h.map(facet_line, "OFFSET", "SECTION AREA [Ų]", "amplitude")
-        h.map(facet_auc, "OFFSET", "SECTION AREA [Ų]", "NEW")
+        h.map(facet_line, "OFFSET", "SECTION AREA [$\AA^2$]", "amplitude")
+        # h.map(facet_auc, "OFFSET", "SECTION AREA [$\AA^2$]", "NEW")
 
-        # h.map(sns.scatterplot, "OFFSET", "SECTION AREA [Ų]", data=all_mode)
+        # h.map(sns.scatterplot, "OFFSET", "SECTION AREA [$\AA^2$]", data=all_mode)
         # h.map(sns.lineplot, "OFFSET", "diff")
         # h.map(facet_scatter, "OFFSET", "diff")
 
-        plt.legend()
+        hand, labl = plt.gca().get_legend_handles_labels()
+        plt.legend(labl[:-4], framealpha=0.2)
 
         plt.subplots_adjust(top=0.9)
         h.fig.suptitle("mode " + str(mode))
