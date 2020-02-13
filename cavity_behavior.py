@@ -29,8 +29,8 @@ def facet_scatter(x, y, **kwargs):
     # plt.scatter(x, y, marker='.')
     ax = plt.gca()
     d0 = scipy.zeros(len(y))
-    ax.fill_between(x, y, where=y >= d0, interpolate=True, facecolor='limegreen', alpha=0.4, label="Δ positive")
-    ax.fill_between(x, y, where=y <= d0, interpolate=True, facecolor='indianred', alpha=0.4, label="Δ negative")
+    ax.fill_between(x, y, where=y >= d0, interpolate=True, facecolor='limegreen', alpha=0.6, label="Δ positive")
+    ax.fill_between(x, y, where=y <= d0, interpolate=True, facecolor='indianred', alpha=0.6, label="Δ negative")
     # xint = range(min(x), math.ceil(max(x)) + 1)
     # plt.xticks(xint)
 
@@ -160,8 +160,9 @@ if __name__ == '__main__':
 
     all['diff'] = all.apply(lambda r: subspace(r, all), axis=1)
 
-    col_list = list(set(all['struct'].tolist()))
-    col_list.sort()
+    # col_list = list(set(all['struct'].tolist()))
+    # col_list.sort()
+    col_list = ['4kvm', '5k18', '4u9v', '3tfy', '5icv', '5wjd']
 
     tunnel_struct_neg_dict = {
         '3tfy': -4,
@@ -196,10 +197,10 @@ if __name__ == '__main__':
     #                   aspect=1, hue="amplitude", col_order=col_list)
 
     # sns.set(font_scale=1)
-    sns.set_style("whitegrid", {'axes.grid': False})
+    sns.set_style('ticks', {'axes.grid': False})
     h = sns.FacetGrid(all_mode_filter, col="struct", row="mode", sharex=False, sharey=False, height=6,
                       aspect=1, hue="amplitude",
-                      gridspec_kws={"hspace": 0.6})
+                      gridspec_kws={"hspace": 0.6}, col_order=col_list)
 
     sns.color_palette("BuGn_r")
     # all["OFFSET"] = all["OFFSET"].astype(str)
@@ -238,7 +239,7 @@ if __name__ == '__main__':
     #            s='OFFSET [$\AA$]',  # this is the text in the xlabel
     #            size=10)
 
-    plt.subplots_adjust(top=0.975, bottom=0.025, left=0.025, right=0.975)
+    plt.subplots_adjust(top=0.975, bottom=0.03, left=0.025, right=0.975)
     # for ax in h.axes.ravel():
     #     ax.set_xticklabels(ax.get_xticklabels(), fontsize=2)
 
